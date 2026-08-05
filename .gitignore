@@ -1,0 +1,13 @@
+# Entorno Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secretos
+.env
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
