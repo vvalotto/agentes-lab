@@ -227,7 +227,7 @@ def react_loop(concepto_ddd: str) -> str:
         # El modelo razona y decide su próximo paso
         response = client.messages.create(
             model=MODEL,
-            max_tokens=1024,
+            max_tokens=2048,
             system=SYSTEM_PROMPT,
             tools=TOOLS_SCHEMA,
             messages=messages
@@ -275,6 +275,18 @@ def react_loop(concepto_ddd: str) -> str:
                     texto_final += block.text
 
             return texto_final
+
+        # ── RESPUESTA TRUNCADA: se agotó max_tokens ───────────
+        # El modelo integró los resultados de las tools pero no
+        # alcanzó a terminar de escribir. Devolvemos lo generado
+        # hasta el corte en vez de descartarlo en silencio.
+        elif response.stop_reason == "max_tokens":
+            print(f"[!] Ciclo {ciclo}: respuesta truncada por max_tokens\n")
+            texto_final = ""
+            for block in response.content:
+                if hasattr(block, "text"):
+                    texto_final += block.text
+            return texto_final + "\n\n*(respuesta truncada por límite de tokens)*"
 
         # ── CASO INESPERADO ──────────────────────────────────
         else:
