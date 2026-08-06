@@ -113,14 +113,67 @@ Python corriendo en tu máquina.
 
 ---
 
-## Cómo se relacionan los tres diagramas
+## 4. Anatomía de `TOOLS_SCHEMA`
+
+`TOOLS_SCHEMA` es lo que el *modelo ve* de cada herramienta — nombres, descripciones
+y parámetros. No es la implementación: es la declaración que le permite a Claude
+decidir *cuándo* pedir una tool y *con qué argumentos*, sin ejecutar nada él mismo.
+Cada elemento de la lista tiene la misma forma, sin importar qué haga la tool por
+dentro.
+
+```mermaid
+flowchart TB
+    T["Un elemento de TOOLS_SCHEMA<br/>(una herramienta declarada)"]
+
+    N["name<br/>string — identificador único<br/>Claude lo usa para pedir esta tool específica"]
+    D["description<br/>string — la ÚNICA señal que tiene Claude<br/>para decidir CUÁNDO usar esta tool"]
+    S["input_schema<br/>JSON Schema — qué argumentos acepta"]
+
+    T --> N
+    T --> D
+    T --> S
+
+    ST["type: 'object'"]
+    P["properties<br/>un campo por parámetro"]
+    R["required<br/>array — qué parámetros son obligatorios"]
+
+    S --> ST
+    S --> P
+    S --> R
+
+    P1["concepto<br/>type: string<br/>description: 'El concepto DDD a ilustrar'"]
+    P2["dominio<br/>type: string<br/>description: 'Dominio de negocio...'"]
+    P --> P1
+    P --> P2
+
+    style D fill:#1e3a5f,color:#fff
+    style R fill:#4a4a1a,color:#fff
+```
+
+**Ejemplo real:** la tool `generar_codigo` de
+[`hola_agente/agente_ddd.py`](../../01_prototipos/hola_agente/agente_ddd.py) — dos
+parámetros (`concepto`, `dominio`), ambos obligatorios según `required`.
+
+**El punto que no es obvio a simple vista:** `TOOLS_SCHEMA` (lo que Claude *ve*) y
+`TOOLS_IMPL` (lo que el código *ejecuta*) son dos estructuras separadas que conviven
+en el mismo archivo, conectadas solo por el `name`. Claude nunca toca `TOOLS_IMPL`
+— ese dispatcher es puro Python de tu lado. Esta separación es la misma que después
+el Claude Agent SDK esconde detrás del decorador `@tool` en `hola_agente_sdk`: ahí
+`TOOLS_SCHEMA` e implementación se declaran juntos, pero conceptualmente siguen
+siendo las dos mismas piezas.
+
+---
+
+## Cómo se relacionan los cuatro diagramas
 
 El diagrama 1 (ReAct) describe el *comportamiento* — qué pasa en cada paso. El
 diagrama 2 (estructura del agente) describe los *componentes* — qué piezas hacen
 falta para que ese comportamiento sea posible. El diagrama 3 (harness) describe
-*quién construye esas piezas* — vos a mano, un SDK, o un servicio gestionado. Los
-tres capturan el mismo sistema desde ángulos distintos: proceso, arquitectura, y
-responsabilidad de implementación.
+*quién construye esas piezas* — vos a mano, un SDK, o un servicio gestionado. El
+diagrama 4 (`TOOLS_SCHEMA`) baja un nivel más y muestra la forma concreta de una
+sola de esas piezas — la Herramienta del diagrama 2 — tal como Claude la percibe.
+Los cuatro capturan el mismo sistema desde ángulos distintos: proceso, arquitectura,
+responsabilidad de implementación, y detalle de una pieza puntual.
 
 ---
 
