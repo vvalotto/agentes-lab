@@ -293,7 +293,7 @@ if __name__ == "__main__":
     # "Entidad", "Value Object", "Repositorio",
     # "Evento de Dominio", "Contexto Delimitado", "Servicio de Dominio"
 
-    concepto = "Agregado"
+    concepto = "Conformista"
 
     resultado = react_loop(concepto)
     print(resultado)
