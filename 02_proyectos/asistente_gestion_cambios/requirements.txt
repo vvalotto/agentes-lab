@@ -3,4 +3,8 @@ uvicorn>=0.32.0
 PyGithub>=2.4.0
 python-dotenv>=1.0.0
 requests>=2.32.0
-# anthropic y streamlit ya están en el requirements.txt raíz del laboratorio
+anthropic>=0.40.0
+streamlit>=1.38.0
+# Duplica anthropic/streamlit del requirements.txt raíz del laboratorio a
+# propósito: el Dockerfile de este proyecto solo tiene como build context
+# esta carpeta (no el monorepo), tiene que ser autocontenido para el deploy.

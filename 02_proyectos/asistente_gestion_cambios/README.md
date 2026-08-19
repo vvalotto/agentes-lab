@@ -158,6 +158,42 @@ El repo dedicado de este POC es
 [`vvalotto/gestion-cambios-poc`](https://github.com/vvalotto/gestion-cambios-poc)
 (privado), con los labels `estado:*` y `clase-*` ya creados.
 
+## Deploy — Fly.io
+
+Desplegado en **https://gestion-cambios-poc.fly.dev/** — una sola app de
+Fly, dos grupos de proceso (`backend`, `frontend`), definidos en
+`fly.toml`. El canal mail queda **afuera de este deploy** a propósito
+(no se cargaron `IMAP_USER`/`IMAP_APP_PASSWORD` como secrets) — exponer la
+contraseña de aplicación de Gmail en un host público es una decisión
+aparte, todavía no tomada.
+
+```bash
+cd 02_proyectos/asistente_gestion_cambios
+fly apps create gestion-cambios-poc          # una vez
+fly secrets set GITHUB_TOKEN=... GITHUB_REPO=... ANTHROPIC_API_KEY=... ROLES_API_KEYS=...
+fly deploy
+```
+
+**Decisiones de la infraestructura, con su motivo:**
+
+- **`requirements.txt` del proyecto quedó autocontenido** (duplica
+  `anthropic`/`streamlit`, antes solo vivían en el `requirements.txt` raíz
+  del laboratorio) — el build de Docker solo tiene como contexto esta
+  carpeta, no el monorepo completo.
+- **El backend no tiene `[[services]]` público en `fly.toml`.** El primer
+  intento exponía backend y frontend en el puerto 443 de la misma app, y
+  el ruteo quedaba ambiguo (a veces `/health` devolvía el HTML de
+  Streamlit). El backend solo necesita ser alcanzable *entre* las dos
+  Machines de la app — el frontend lo encuentra por la red privada de Fly
+  (`backend.process.gestion-cambios-poc.internal:8731`, seteado como
+  `API_BASE_URL` en `[env]`).
+- **`uvicorn` bindea a `--host ::` (IPv6), no `0.0.0.0`.** La red privada
+  de Fly (6PN) es IPv6 — un backend bindeado solo a IPv4 responde bien a
+  tráfico público pero rechaza las conexiones internas entre Machines
+  (`Connection refused`, no timeout). Fue el bug real que hubo que
+  diagnosticar por SSH (`fly ssh console`) antes de que el chat funcionara
+  contra la URL pública.
+
 ## Decisiones de diseño
 
 **¿Por qué GitHub Issues y no Jira, si la skill original ya resolvía esto

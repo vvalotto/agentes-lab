@@ -1,0 +1,36 @@
+app = "gestion-cambios-poc"
+primary_region = "gru"
+
+[build]
+
+[processes]
+  backend  = "uvicorn backend.main:app --host :: --port 8731"
+  frontend = "streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true"
+
+[env]
+  API_BASE_URL = "http://backend.process.gestion-cambios-poc.internal:8731"
+
+# El backend NO tiene [[services]] a propósito: no necesita puerto público.
+# El frontend lo alcanza por la red privada de Fly (backend.process.<app>.internal,
+# ver [env] arriba). Exponer los dos servicios en el puerto 443 de la misma
+# app generaba ruteo ambiguo — a veces /health devolvía el HTML de Streamlit.
+
+[[services]]
+  processes = ["frontend"]
+  internal_port = 8501
+  protocol = "tcp"
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
