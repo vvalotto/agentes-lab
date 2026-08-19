@@ -1,0 +1,6 @@
+fastapi>=0.115.0
+uvicorn>=0.32.0
+PyGithub>=2.4.0
+python-dotenv>=1.0.0
+requests>=2.32.0
+# anthropic y streamlit ya están en el requirements.txt raíz del laboratorio

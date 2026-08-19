@@ -202,11 +202,24 @@ de madurez adecuado para iniciarse:
 
 | Proyecto | Dominio | Etapa mínima requerida | Estado |
 |---|---|---|---|
-| Asistente IEC 62304 — Gestión de Cambios | Calidad / Software médico | Etapa 3 | Planificado |
+| [Asistente IEC 62304 — Gestión de Cambios](02_proyectos/asistente_gestion_cambios/) | Calidad / Software médico | Etapa 3 | **POC funcional, adelantado a Etapa 4** |
 | Generador de reflexiones PMBOK diarias | Contenido | Etapa 2 | Planificado |
 | Evaluador automático de trabajos prácticos | Docencia | Etapa 3 | Planificado |
 | GPT personalizado para trazabilidad IEC 62304 | Calidad | Etapa 4 | Planificado |
 | Agente de diseño de dominio (DDD workshop) | Software | Etapa 4 | Planificado |
+
+**Nota sobre el adelanto del Asistente IEC 62304:** este proyecto requería formalmente
+cerrar la Etapa 3 antes de empezar (es, en la práctica, un sistema multi-agente —
+territorio de Etapa 4). Se avanzó antes por interés puntual en un problema concreto:
+convertir la skill `gestion-cambios-iec62304-8-2` (single-prompt sobre Jira) en un
+backend con un agente por módulo, expuesto como API, con GitHub Issues (repo dedicado
+`vvalotto/gestion-cambios-poc`) como almacén de estado y un frontend Streamlit de
+prueba. El hallazgo central: convertir una skill en "agentes" no significa multiplicar
+agentes por cada paso — significa identificar qué parte del diseño necesitaba dejar de
+vivir en el prompt (acá, la autorización por rol, movida a la capa de API). Detalle
+completo en el [README del proyecto](02_proyectos/asistente_gestion_cambios/README.md).
+El salto de orden queda documentado, no oculto — la Etapa 3 sigue pendiente de cierre
+por su propio mérito.
 
 ---
 
