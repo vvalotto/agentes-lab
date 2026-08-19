@@ -91,6 +91,59 @@ Dos llamadas acotadas por turno, no un loop ReAct abierto — mismo
 principio que `agente_solicitud`/`agente_aprobacion`: el código orquesta,
 el modelo redacta o extrae en pasos angostos.
 
+## Flujo alternativo: canal mail (Módulo 1)
+
+El canal mail no le agrega nada nuevo a `core.casos_de_uso` ni a
+`agente_extraccion` — solo produce el texto que el canal chat ya sabía
+recibir. Leer un mail es, para el backend, indistinguible de que alguien
+escriba ese mismo texto en el chat.
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario (frontend Streamlit)
+    participant API as Backend FastAPI
+    participant Mail as core.mail_reader
+    participant IMAP as Gmail (IMAP, etiqueta dedicada)
+    participant Chat as POST /chat/mensaje
+
+    U->>API: GET /mail/recientes (X-Api-Key)
+    API->>Mail: listar_recientes()
+    Mail->>IMAP: SEARCH ALL (solo la etiqueta configurada)
+    IMAP-->>Mail: uids + headers (BODY.PEEK, no marca como leído)
+    Mail-->>API: [CorreoResumen]
+    API-->>U: lista (remitente, asunto, fecha)
+
+    U->>API: GET /mail/{uid} ("Usar este mail")
+    API->>Mail: leer_correo(uid)
+    Mail->>IMAP: FETCH BODY.PEEK[] (uid)
+    IMAP-->>Mail: mensaje crudo
+    Mail-->>API: "Asunto: ...\n\n{cuerpo texto plano}"
+    API-->>U: {contenido}
+
+    Note over U,Chat: El frontend manda "contenido" como mensaje inicial —<br/>de acá en adelante es EXACTAMENTE el diagrama del canal chat de arriba.
+    U->>Chat: POST /chat/mensaje (mensaje: contenido, conversacion_id: null)
+```
+
+Puntos que valen la pena remarcar:
+
+- **El disparo es humano, no el buzón.** El agente nunca "escucha" el
+  correo entrante — alguien autenticado tiene que elegir explícitamente
+  "usar este mail". La identidad de quien va a figurar como aprobador o
+  autorizado sigue siendo la del `X-Api-Key`, nunca la del remitente del
+  mail (que es solo un dato más, extraído por `agente_extraccion` igual
+  que cualquier otro campo).
+- **Solo lectura, con `BODY.PEEK`.** `mail_reader.py` nunca marca un
+  correo como leído ni lo modifica — el `select()` además se hace en modo
+  `readonly=True`. No manda mails, no mueve nada de carpeta.
+- **Etiqueta dedicada, no INBOX.** `IMAP_ETIQUETA` (default
+  `gestion-cambios`) acota qué correos son candidatos — un mail personal
+  fuera de esa etiqueta ni aparece en `/mail/recientes`, sin importar
+  cuántos miles de mensajes tenga el resto de la cuenta.
+- **Canal opcional.** Si `IMAP_USER`/`IMAP_APP_PASSWORD` no están
+  configurados, el resto del backend (formulario, chat, aprobación)
+  arranca y funciona igual — la falta de configuración recién se nota si
+  alguien intenta usar `/mail/*`.
+
 ## Máquina de estados (7 estados, heredada del workflow de Jira original)
 
 ```mermaid
@@ -128,6 +181,7 @@ asistente_gestion_cambios/
 │   │   ├── auth.py            Roles y autorización (agnóstica de GitHub)
 │   │   ├── casos_de_uso.py    Lógica de negocio compartida entre canales
 │   │   ├── conversaciones.py  Estado del chat en memoria (sin persistencia)
+│   │   ├── mail_reader.py     Adaptador IMAP — solo lectura, etiqueta dedicada
 │   │   ├── github_tracker.py  Wrapper PyGithub — únicas llamadas a la API externa
 │   │   └── models.py          Esquemas Pydantic de entrada/salida
 │   ├── agents/                 Un módulo por agente (Claude, sin tools propias)
@@ -139,6 +193,7 @@ asistente_gestion_cambios/
 │       ├── _common.py             Dependency de auth compartida entre routers
 │       ├── solicitudes.py         Canal formulario (Módulo 1)
 │       ├── chat.py                Canal chat (Módulo 1)
+│       ├── mail.py                Canal mail — lista/lee, delega al chat (Módulo 1)
 │       └── aprobaciones.py        Módulo 2
 └── frontend/
     └── app.py                 Cliente Streamlit puro — solo llama a la API
@@ -154,5 +209,11 @@ no debería tocar `state_machine.py` ni `auth.py`.
 y `chat.py` terminen en el mismo lugar: ninguno de los dos routers
 autoriza, redacta ni publica por su cuenta — arman un `SolicitudIn` (uno
 lo recibe completo, el otro lo arma con `agente_extraccion`) y delegan.
-Un tercer canal (mail, por ejemplo) solo necesitaría producir ese mismo
-`SolicitudIn` para reusar todo lo demás sin tocar nada.
+
+El canal mail (`routers/mail.py`, `core/mail_reader.py`) confirmó esa
+predicción en la práctica: no llama a `casos_de_uso` directamente ni sabe
+nada de `SolicitudIn` — solo lista y lee correos por IMAP, y el frontend
+manda ese texto al mismo `POST /chat/mensaje` de siempre. Fue el primer
+canal agregado *después* de escribir esta nota, y no hizo falta tocar
+`casos_de_uso.py`, `agente_extraccion.py` ni `agente_solicitud.py` para
+sumarlo.
