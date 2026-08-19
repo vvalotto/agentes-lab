@@ -45,6 +45,17 @@ class AprobacionOut(BaseModel):
     decision: Decision
 
 
+class CorreoResumen(BaseModel):
+    uid: str
+    remitente: str
+    asunto: str
+    fecha: str
+
+
+class CorreoContenido(BaseModel):
+    contenido: str
+
+
 class MensajeChatIn(BaseModel):
     conversacion_id: str | None = Field(None, description="None para arrancar una conversación nueva")
     mensaje: str

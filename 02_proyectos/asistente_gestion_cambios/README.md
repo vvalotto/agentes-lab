@@ -11,12 +11,14 @@ primero; se decidió avanzar antes por interés puntual en el problema de
 autorización, no por arrastre del orden. Queda documentado acá para que
 quede explícito, no oculto.
 
-**Estado:** POC funcional — Módulos 1 (Solicitud, por formulario **y por
-chat**) y 2 (Aprobación) de los 5 de la norma. Módulos 3 (Implementación), 4
-(Verificación) y 5 (Trazabilidad) sin implementar — ver "Próximo paso".
+**Estado:** POC funcional — Módulo 1 (Solicitud) con **tres canales de
+entrada** (formulario, chat, mail vía IMAP) y Módulo 2 (Aprobación), de los 5
+de la norma. Módulos 3 (Implementación), 4 (Verificación) y 5 (Trazabilidad)
+sin implementar — ver "Próximo paso".
 
 **Tiempo estimado para ejecutarlo:** 10 minutos (requiere repo GitHub propio
-y una API key de Anthropic).
+y una API key de Anthropic; el canal mail es opcional y necesita además una
+cuenta de Gmail con contraseña de aplicación).
 
 ---
 
@@ -66,6 +68,13 @@ la clase IEC 62304 del cambio determina quién puede decidir).
   completa `SolicitudIn` de a poco, preguntando puntualmente lo que falta,
   hasta poder crear el Issue con el mismo `casos_de_uso.crear_solicitud()`
   que usa el formulario. Ver "Agente de extracción" abajo.
+- Un **canal mail** (`GET /mail/recientes`, `GET /mail/{uid}`,
+  `backend/core/mail_reader.py`): lee por IMAP una etiqueta dedicada de
+  Gmail (no INBOX completo) y manda el contenido del correo elegido como
+  primer mensaje al mismo `POST /chat/mensaje` del canal chat — cero
+  lógica de negocio nueva, solo un adaptador de lectura. El disparo sigue
+  siendo humano (el usuario elige "usar este mail"), no un listener
+  automático — ver "Canal mail" abajo, por qué.
 
 ## Agente de extracción — canal chat
 
@@ -97,6 +106,39 @@ lenguaje libre y el sistema arma los datos.
   información repetida/mezclada) y extrajo datos limpios y coherentes en
   2-3 turnos — ver Issues de prueba cerrados en el repo dedicado.
 
+## Canal mail — IMAP disparado por humano
+
+Motivado por acercar todavía más el Módulo 1 al usuario final: alguien le
+manda un mail a la cuenta de un humano del equipo, y es **ese humano quien
+decide** hacer que el agente lo lea — no el buzón procesando solo lo que
+llega.
+
+- **Por qué "disparado por humano" y no un listener automático**: si el
+  buzón procesara mails entrantes sin que nadie los mire, reaparece el
+  problema de autorización que motivó todo este rediseño (¿cómo confío en
+  quién manda el mail, sin que nadie lo confirme?). Con un humano
+  autenticado eligiendo qué mail usar, la identidad sigue siendo la sesión
+  (`X-Api-Key` → rol) — el remitente real del mail es un dato más que
+  extrae `agente_extraccion` (`solicitante`, `origen_reporte`), nunca una
+  credencial.
+- **Cero lógica de negocio nueva**: `backend/core/mail_reader.py` solo
+  lista y lee correos por IMAP (`imaplib`/`email` de la librería estándar,
+  sin dependencias nuevas). El texto que produce se manda tal cual a
+  `POST /chat/mensaje` — el mismo pipeline de extracción, validación y
+  creación del Issue que ya existía para el chat manual, sin tocarlo.
+- **Contraseña de aplicación de Gmail, no OAuth**: mismo patrón que
+  `GITHUB_TOKEN`/`ANTHROPIC_API_KEY` — un secreto en `.env`, sin registrar
+  una app OAuth. Requiere verificación en 2 pasos activada en la cuenta y
+  generarla en myaccount.google.com/apppasswords (ver `.env.example`).
+- **Etiqueta dedicada, no INBOX completo**: el adaptador solo lee la
+  etiqueta configurada en `IMAP_ETIQUETA` (default `gestion-cambios`) —
+  probado explícitamente que un mail fuera de esa etiqueta no aparece en
+  `/mail/recientes`, aunque el INBOX real tenga miles de mensajes.
+- **Canal opcional**: si `IMAP_USER`/`IMAP_APP_PASSWORD` no están en el
+  `.env`, el resto del backend (formulario, chat, aprobación) arranca
+  igual — `mail_reader.py` recién falla, con un mensaje claro, cuando
+  alguien intenta usar ese canal puntual.
+
 ## Cómo ejecutarlo
 
 ```bash
@@ -106,6 +148,7 @@ pip install -r requirements.txt -r 02_proyectos/asistente_gestion_cambios/requir
 
 cd 02_proyectos/asistente_gestion_cambios
 cp .env.example .env   # completar GITHUB_TOKEN (gh auth token), GITHUB_REPO, ANTHROPIC_API_KEY, ROLES_API_KEYS
+# IMAP_* es opcional — solo hace falta si vas a probar el canal mail
 
 uvicorn backend.main:app --port 8731            # terminal 1
 API_BASE_URL=http://127.0.0.1:8731 streamlit run frontend/app.py --server.port 8502   # terminal 2
@@ -159,6 +202,15 @@ usó quien llama — el body nunca puede mentir sobre quién es el aprobador.
   de necesitar un segundo canal hizo que agregar el chat fuera casi solo
   el agente nuevo — el refactor pagó de inmediato, no fue trabajo
   especulativo.
+- El canal mail terminó siendo casi gratis por la misma razón: como el
+  chat ya aceptaba cualquier texto libre como primer mensaje, "leer un
+  mail" resultó ser solo "producir texto y mandarlo al mismo lugar" — cero
+  código de negocio nuevo, solo un adaptador de lectura (IMAP).
+- El disparador humano (elegir qué mail usar) resolvió el problema de
+  identidad del canal sin inventar nada: la sesión autenticada sigue
+  siendo la fuente de verdad del rol, el mail es solo datos. La alternativa
+  (un listener automático sobre el buzón) habría reabierto exactamente el
+  problema de autorización que motivó todo este proyecto.
 
 ## Próximo paso
 

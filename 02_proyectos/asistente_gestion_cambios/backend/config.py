@@ -45,3 +45,12 @@ GITHUB_TOKEN = _requerida("GITHUB_TOKEN")
 GITHUB_REPO = _requerida("GITHUB_REPO")  # formato "owner/repo"
 ANTHROPIC_API_KEY = _requerida("ANTHROPIC_API_KEY")
 ROLES_API_KEYS = _parsear_roles_api_keys(_requerida("ROLES_API_KEYS"))
+
+# Canal mail: opcional a propósito. A diferencia de lo de arriba, no usa
+# _requerida() — si no está configurado, el resto del backend (formulario,
+# chat, aprobación) tiene que poder arrancar igual. mail_reader.py es quien
+# valida esto recién cuando alguien intenta usar el canal.
+IMAP_HOST = os.environ.get("IMAP_HOST", "imap.gmail.com")
+IMAP_USER = os.environ.get("IMAP_USER")
+IMAP_APP_PASSWORD = os.environ.get("IMAP_APP_PASSWORD")
+IMAP_ETIQUETA = os.environ.get("IMAP_ETIQUETA", "gestion-cambios")
