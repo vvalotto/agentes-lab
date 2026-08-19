@@ -1,0 +1,454 @@
+<meta charset="utf-8">
+<title>Arquitectura Multiagente IEC 62304</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #edeff3;
+    --surface-3: #e2e6ec;
+    --text: #1a2130;
+    --text-muted: #5b6472;
+    --text-faint: #8b93a0;
+    --border: #c7cdd6;
+    --border-soft: #dbe0e6;
+    --accent: #2e6f8e;
+    --accent-strong: #1f5471;
+    --accent-soft: #dceaf0;
+    --danger: #b3261e;
+    --danger-soft: #fbe4e1;
+    --shadow: 0 1px 2px rgba(20, 30, 45, 0.06), 0 8px 24px rgba(20, 30, 45, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e141b;
+      --surface: #161e27;
+      --surface-2: #1d2733;
+      --surface-3: #24303d;
+      --text: #e6eaf0;
+      --text-muted: #93a0b0;
+      --text-faint: #6b7788;
+      --border: #2c3846;
+      --border-soft: #23303d;
+      --accent: #6fb8da;
+      --accent-strong: #8fcbe6;
+      --accent-soft: #1e3542;
+      --danger: #e5786f;
+      --danger-soft: #3a2020;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0e141b;
+    --surface: #161e27;
+    --surface-2: #1d2733;
+    --surface-3: #24303d;
+    --text: #e6eaf0;
+    --text-muted: #93a0b0;
+    --text-faint: #6b7788;
+    --border: #2c3846;
+    --border-soft: #23303d;
+    --accent: #6fb8da;
+    --accent-strong: #8fcbe6;
+    --accent-soft: #1e3542;
+    --danger: #e5786f;
+    --danger-soft: #3a2020;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 56px 24px 88px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  header.hero {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--text);
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 66ch;
+    color: var(--text-muted);
+    font-size: 16.5px;
+  }
+
+  .lede strong { color: var(--text); font-weight: 650; }
+
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 0.88em;
+  }
+
+  code {
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+  }
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .diagram-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 8px;
+    overflow-x: auto;
+  }
+
+  figure { margin: 0; }
+
+  svg { display: block; width: 100%; height: auto; min-width: 720px; }
+
+  figcaption {
+    padding: 14px 18px 6px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-soft);
+    margin-top: 8px;
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .legend-item strong { color: var(--text); font-weight: 650; }
+
+  .swatch {
+    width: 22px;
+    height: 0;
+    border-top: 2.5px solid var(--accent);
+    margin-top: 9px;
+    flex: none;
+  }
+  .swatch.dashed { border-top-style: dashed; border-top-color: var(--danger); }
+  .swatch.boundary { border-top-style: dashed; border-top-color: var(--text-faint); }
+
+  .gates {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+  }
+
+  .gate-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--danger);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .gate-card .status {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--danger);
+    letter-spacing: 0.04em;
+  }
+
+  .gate-card h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+    color: var(--text);
+  }
+
+  .gate-card p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  footer {
+    padding-top: 8px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <span class="eyebrow">IEC 62304 · 8.2 — Gestión de Cambios</span>
+    <h1>Del prompt único al backend de agentes</h1>
+    <p class="lede">
+      Cómo quedó armado el POC que convierte la skill <code>gestion-cambios-iec62304-8-2</code>
+      (un solo prompt orquestando 5 módulos sobre Jira) en un <strong>backend con un agente
+      por módulo</strong>, expuesto como API, con <strong>GitHub Issues</strong> como almacén de
+      estado en lugar del workflow de Jira.
+    </p>
+  </header>
+
+  <section>
+    <h2>Componentes y flujo de una request</h2>
+    <div class="diagram-card">
+      <figure>
+        <svg viewBox="0 0 1040 660" role="img" aria-label="Diagrama de componentes: el cliente Streamlit llama a un router FastAPI que pasa por un gate de autorización por rol, opcionalmente un gate de máquina de estados solo para el módulo de Aprobación, luego un agente de Claude que redacta texto, y un tracker que persiste el resultado como Issue en GitHub. Los dos gates pueden cortar el flujo con 403 o 409 antes de tocar el agente o GitHub.">
+
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="arrowDanger" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--danger)"/>
+            </marker>
+          </defs>
+
+          <g fill="none" stroke="currentColor">
+
+            <!-- Backend boundary -->
+            <rect x="222" y="60" width="638" height="330" rx="14" stroke-dasharray="4 5" opacity="0.55"/>
+            <text x="240" y="86" font-size="12.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.6">backend/  ·  un solo proceso FastAPI</text>
+
+            <!-- Cliente -->
+            <rect x="20" y="160" width="150" height="70" rx="10" fill="var(--surface-2)" stroke="var(--border)"/>
+          </g>
+
+          <text x="95" y="190" text-anchor="middle" font-size="13.5" font-weight="650" fill="currentColor">Cliente</text>
+          <text x="95" y="207" text-anchor="middle" font-size="11" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.65">frontend/app.py</text>
+
+          <!-- Router -->
+          <g fill="none" stroke="var(--border)">
+            <rect x="250" y="150" width="170" height="90" rx="10" fill="var(--surface)"/>
+          </g>
+          <text x="335" y="178" text-anchor="middle" font-size="13.5" font-weight="650" fill="currentColor">Router</text>
+          <text x="335" y="195" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.7">POST /solicitudes</text>
+          <text x="335" y="210" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.7">POST /solicitudes/{clave}</text>
+          <text x="335" y="223" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.7">/aprobacion</text>
+
+          <!-- Auth gate -->
+          <g fill="none" stroke="var(--accent)" stroke-width="1.6">
+            <rect x="460" y="150" width="170" height="90" rx="10" fill="var(--accent-soft)"/>
+          </g>
+          <text x="545" y="178" text-anchor="middle" font-size="13.5" font-weight="650" fill="currentColor">Gate: autorización</text>
+          <text x="545" y="195" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.75">core/auth.py</text>
+          <text x="545" y="212" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.75">resolver_rol · autorizar_*</text>
+
+          <!-- Agente -->
+          <g fill="none" stroke="var(--border)">
+            <rect x="700" y="150" width="150" height="90" rx="10" fill="var(--surface)"/>
+          </g>
+          <text x="775" y="178" text-anchor="middle" font-size="13.5" font-weight="650" fill="currentColor">Agente</text>
+          <text x="775" y="195" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.7">agents/agente_*.py</text>
+          <text x="775" y="212" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.7">redacta, no decide</text>
+
+          <!-- State gate (dip below, only módulo 2) -->
+          <g fill="none" stroke="var(--accent)" stroke-width="1.6">
+            <rect x="460" y="280" width="170" height="90" rx="10" fill="var(--accent-soft)"/>
+          </g>
+          <text x="545" y="305" text-anchor="middle" font-size="13.5" font-weight="650" fill="currentColor">Gate: transición</text>
+          <text x="545" y="322" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.75">core/state_machine.py</text>
+          <text x="545" y="339" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.75">transicionar(estado, accion)</text>
+          <text x="545" y="356" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.55">solo Módulo 2 — Aprobación</text>
+
+          <!-- github tracker -->
+          <g fill="none" stroke="var(--border)">
+            <rect x="700" y="280" width="150" height="90" rx="10" fill="var(--surface)"/>
+          </g>
+          <text x="775" y="305" text-anchor="middle" font-size="13.5" font-weight="650" fill="currentColor">Tracker</text>
+          <text x="775" y="322" text-anchor="middle" font-size="10.5" font-family="ui-monospace, monospace" fill="currentColor" opacity="0.7">core/github_tracker.py</text>
+          <text x="775" y="339" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.7">crea, comenta, etiqueta</text>
+
+          <!-- External: Claude API -->
+          <g fill="none" stroke="var(--border)">
+            <rect x="880" y="130" width="140" height="70" rx="10" fill="var(--surface-3)"/>
+          </g>
+          <text x="950" y="158" text-anchor="middle" font-size="12.5" font-weight="650" fill="currentColor">Claude API</text>
+          <text x="950" y="174" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">sistema externo</text>
+
+          <!-- External: GitHub Issues -->
+          <g fill="none" stroke="var(--border)">
+            <rect x="880" y="300" width="140" height="70" rx="10" fill="var(--surface-3)"/>
+          </g>
+          <text x="950" y="325" text-anchor="middle" font-size="12.5" font-weight="650" fill="currentColor">GitHub Issues</text>
+          <text x="950" y="341" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">repo dedicado</text>
+          <text x="950" y="354" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.6">estado:* · clase-*</text>
+
+          <!-- Rejection lane -->
+          <rect x="460" y="470" width="170" height="56" rx="8" fill="var(--danger-soft)" stroke="var(--danger)" stroke-width="1.3"/>
+          <text x="545" y="493" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--danger)" font-family="ui-monospace, monospace">403</text>
+          <text x="545" y="510" text-anchor="middle" font-size="10.5" fill="var(--danger)">rol no autoriza la acción</text>
+
+          <rect x="700" y="470" width="150" height="56" rx="8" fill="var(--danger-soft)" stroke="var(--danger)" stroke-width="1.3"/>
+          <text x="775" y="493" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--danger)" font-family="ui-monospace, monospace">409</text>
+          <text x="775" y="510" text-anchor="middle" font-size="10.5" fill="var(--danger)">transición inválida</text>
+
+          <!-- Arrows: main spine -->
+          <g stroke="currentColor" stroke-width="1.4" fill="none">
+            <line x1="170" y1="195" x2="248" y2="195" marker-end="url(#arrow)"/>
+            <line x1="420" y1="195" x2="458" y2="195" marker-end="url(#arrow)"/>
+          </g>
+          <text x="335" y="145" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65">POST + X-Api-Key</text>
+          <text x="440" y="140" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65">resolver_rol(api_key)</text>
+
+          <!-- Auth gate -> Agente (módulo 1, bypass) -->
+          <path d="M 630 175 C 665 165, 675 165, 698 175" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#arrow)"/>
+          <text x="663" y="158" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">Módulo 1 · crear</text>
+
+          <!-- Auth gate -> State gate (módulo 2) -->
+          <path d="M 545 240 L 545 278" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#arrow)"/>
+          <text x="600" y="262" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">Módulo 2 · aprobar</text>
+
+          <!-- State gate -> Agente -->
+          <path d="M 630 300 C 665 290, 675 290, 698 205" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#arrow)"/>
+          <text x="672" y="255" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">transición ok</text>
+
+          <!-- Auth gate -> 403 -->
+          <path d="M 545 240 L 545 468" stroke="var(--danger)" stroke-width="1.3" stroke-dasharray="3 4" fill="none" marker-end="url(#arrowDanger)"/>
+
+          <!-- State gate -> 409 -->
+          <path d="M 640 350 C 700 400, 740 430, 775 468" stroke="var(--danger)" stroke-width="1.3" stroke-dasharray="3 4" fill="none" marker-end="url(#arrowDanger)"/>
+
+          <!-- Agente <-> Claude -->
+          <path d="M 850 175 L 878 160" stroke="currentColor" stroke-width="1.3" fill="none" marker-end="url(#arrow)"/>
+          <path d="M 878 178 L 852 193" stroke="currentColor" stroke-width="1.3" fill="none" marker-end="url(#arrow)"/>
+          <text x="862" y="120" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">system prompt</text>
+          <text x="862" y="225" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">texto redactado</text>
+
+          <!-- Agente -> Tracker -->
+          <path d="M 775 240 L 775 278" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#arrow)"/>
+
+          <!-- Tracker <-> GitHub -->
+          <path d="M 850 305 L 878 320" stroke="currentColor" stroke-width="1.3" fill="none" marker-end="url(#arrow)"/>
+          <text x="862" y="290" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.7">crear/comentar/set label</text>
+
+          <!-- Response back to cliente -->
+          <path d="M 775 370 L 775 590 L 95 590 L 95 232" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 4" fill="none" marker-end="url(#arrow)" opacity="0.75"/>
+          <text x="435" y="605" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.65">response JSON — {clave, estado}</text>
+
+        </svg>
+        <figcaption>
+          Los dos <strong>gates</strong> (autorización y transición de estado) se resuelven <em>antes</em>
+          de invocar al agente o tocar GitHub — un 403 o un 409 corta el flujo sin efectos secundarios.
+          El Módulo 1 (Solicitud) no pasa por el gate de transición: crear no es una transición de estado.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Los dos puntos de control</h2>
+    <div class="gates">
+      <div class="gate-card">
+        <span class="status">core/auth.py</span>
+        <h3>La API key decide el rol — no el body del request</h3>
+        <p>
+          En la skill original (single-prompt sobre Jira) el rol lo decía el usuario en el chat y el
+          modelo confiaba en la respuesta. Acá el header <code>X-Api-Key</code> resuelve a un rol fijo;
+          ese rol nunca puede mentir sobre quién aprueba.
+        </p>
+      </div>
+      <div class="gate-card">
+        <span class="status">core/state_machine.py</span>
+        <h3>GitHub no valida transiciones — esta tabla sí</h3>
+        <p>
+          Jira traía gratis un workflow configurable que impedía saltar estados. GitHub Issues solo
+          tiene <em>open/closed</em>, así que los 7 estados se modelan como labels <code>estado:*</code>
+          y esta máquina de estados es la única que decide qué transición es legal.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lectura del diagrama</h2>
+    <div class="legend">
+      <div class="legend-item">
+        <span class="swatch"></span>
+        <span><strong>Flujo feliz</strong> — llamada directa entre componentes, con lo que viaja en la etiqueta.</span>
+      </div>
+      <div class="legend-item">
+        <span class="swatch dashed"></span>
+        <span><strong>Corte del flujo</strong> — un gate rechaza y responde error; el agente y GitHub nunca se tocan.</span>
+      </div>
+      <div class="legend-item">
+        <span class="swatch boundary"></span>
+        <span><strong>Límite de proceso</strong> — todo lo de adentro es un solo backend FastAPI; afuera, sistemas externos reales (Claude, GitHub).</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>POC · 02_proyectos/asistente_gestion_cambios</span>
+    <span>Repo de Issues: <a href="https://github.com/vvalotto/gestion-cambios-poc">vvalotto/gestion-cambios-poc</a></span>
+  </footer>
+
+</div>

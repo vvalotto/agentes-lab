@@ -17,8 +17,8 @@ API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:8731")
 st.set_page_config(page_title="Gestión de Cambios IEC 62304 8.2 — POC", layout="centered")
 st.title("Gestión de Cambios IEC 62304 · 8.2 (POC)")
 st.caption(
-    "Cliente del backend multi-agente. Módulo 1 (Solicitud) y Módulo 2 (Aprobación) — "
-    "los Issues quedan en el repo GitHub dedicado del POC."
+    "Cliente del backend multi-agente. Módulo 1 (Solicitud, por formulario o por chat) "
+    "y Módulo 2 (Aprobación) — los Issues quedan en el repo GitHub dedicado del POC."
 )
 
 with st.sidebar:
@@ -35,7 +35,9 @@ with st.sidebar:
     )
     st.caption(f"API: {API_BASE_URL}")
 
-tab_solicitud, tab_aprobacion = st.tabs(["Módulo 1 — Solicitud", "Módulo 2 — Aprobación"])
+tab_solicitud, tab_chat, tab_aprobacion = st.tabs(
+    ["Módulo 1 — Solicitud", "Chat — Solicitud", "Módulo 2 — Aprobación"]
+)
 
 with tab_solicitud:
     st.write("Registrá una solicitud de cambio. El agente redacta la description del Issue.")
@@ -77,6 +79,62 @@ with tab_solicitud:
                 st.markdown(f"[Ver en GitHub]({datos['url']})")
             else:
                 st.error(f"{resp.status_code}: {resp.json().get('detail', resp.text)}")
+
+with tab_chat:
+    st.write(
+        "Contale el problema como si se lo explicaras a un colega — el agente va "
+        "preguntando lo que le falte hasta poder registrar la solicitud."
+    )
+
+    if "chat_conversacion_id" not in st.session_state:
+        st.session_state.chat_conversacion_id = None
+    if "chat_historial_visible" not in st.session_state:
+        st.session_state.chat_historial_visible = []
+    if "chat_completado" not in st.session_state:
+        st.session_state.chat_completado = False
+
+    if st.button("Nueva conversación", key="chat_reset"):
+        st.session_state.chat_conversacion_id = None
+        st.session_state.chat_historial_visible = []
+        st.session_state.chat_completado = False
+        st.rerun()
+
+    for mensaje in st.session_state.chat_historial_visible:
+        with st.chat_message(mensaje["role"]):
+            st.write(mensaje["content"])
+
+    mensaje_usuario = st.chat_input(
+        "Escribí acá...", disabled=st.session_state.chat_completado
+    )
+
+    if mensaje_usuario:
+        st.session_state.chat_historial_visible.append({"role": "user", "content": mensaje_usuario})
+
+        payload = {
+            "conversacion_id": st.session_state.chat_conversacion_id,
+            "mensaje": mensaje_usuario,
+        }
+        try:
+            resp = requests.post(
+                f"{API_BASE_URL}/chat/mensaje",
+                json=payload,
+                headers={"X-Api-Key": api_key},
+                timeout=30,
+            )
+        except requests.ConnectionError:
+            respuesta_asistente = f"No se pudo conectar a {API_BASE_URL} — ¿está corriendo el backend?"
+        else:
+            if resp.status_code == 200:
+                datos = resp.json()
+                st.session_state.chat_conversacion_id = datos["conversacion_id"]
+                respuesta_asistente = datos["respuesta"]
+                if datos.get("solicitud"):
+                    st.session_state.chat_completado = True
+            else:
+                respuesta_asistente = f"{resp.status_code}: {resp.json().get('detail', resp.text)}"
+
+        st.session_state.chat_historial_visible.append({"role": "assistant", "content": respuesta_asistente})
+        st.rerun()
 
 with tab_aprobacion:
     st.write("Registrá la decisión de aprobación sobre una solicitud existente.")

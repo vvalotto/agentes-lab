@@ -11,9 +11,9 @@ primero; se decidió avanzar antes por interés puntual en el problema de
 autorización, no por arrastre del orden. Queda documentado acá para que
 quede explícito, no oculto.
 
-**Estado:** POC funcional — Módulos 1 (Solicitud) y 2 (Aprobación) de los 5
-de la norma. Módulos 3 (Implementación), 4 (Verificación) y 5 (Trazabilidad)
-sin implementar — ver "Próximo paso".
+**Estado:** POC funcional — Módulos 1 (Solicitud, por formulario **y por
+chat**) y 2 (Aprobación) de los 5 de la norma. Módulos 3 (Implementación), 4
+(Verificación) y 5 (Trazabilidad) sin implementar — ver "Próximo paso".
 
 **Tiempo estimado para ejecutarlo:** 10 minutos (requiere repo GitHub propio
 y una API key de Anthropic).
@@ -60,6 +60,42 @@ la clase IEC 62304 del cambio determina quién puede decidir).
 - Un **frontend Streamlit** (`frontend/app.py`) que consume la API como
   cualquier cliente externo lo haría — no tiene acceso directo a Claude ni
   a GitHub.
+- Un **canal chat** para el Módulo 1 (`POST /chat/mensaje`,
+  `backend/agents/agente_extraccion.py`): en vez de llenar el formulario,
+  el usuario cuenta el problema en lenguaje libre y un segundo agente
+  completa `SolicitudIn` de a poco, preguntando puntualmente lo que falta,
+  hasta poder crear el Issue con el mismo `casos_de_uso.crear_solicitud()`
+  que usa el formulario. Ver "Agente de extracción" abajo.
+
+## Agente de extracción — canal chat
+
+Pensado para acercar el Módulo 1 a un usuario que "no tiene tiempo para
+explicar demasiado": en vez de un formulario estructurado, escribe en
+lenguaje libre y el sistema arma los datos.
+
+- **Es el inverso de `agente_solicitud`**: ese recibe datos limpios y
+  redacta prosa; `agente_extraccion` recibe prosa suelta y devuelve datos
+  limpios. Una vez extraídos, el pipeline es idéntico al del formulario —
+  no se duplicó ninguna lógica de negocio (ver refactor a
+  `core/casos_de_uso.py` en "Decisiones de diseño").
+- **Tool-use forzado, no JSON en texto libre**: `extraer_campos()` declara
+  una tool cuyo `input_schema` espeja los 8 campos de `SolicitudIn` y
+  fuerza al modelo a llamarla (`tool_choice`), pasándole *todo* el
+  historial de la conversación en cada turno — así el modelo hace el merge
+  entre turnos y el backend no necesita lógica propia de fusión.
+- **Qué falta se detecta reusando la validación que ya existe**: se
+  intenta construir `SolicitudIn(**campos)`; si `pydantic.ValidationError`,
+  los campos en el error son exactamente los que faltan — sin mantener una
+  lista de "requeridos" por separado.
+- **Sigue sin ser un loop ReAct abierto**: son dos llamadas acotadas por
+  turno (extraer con tool forzada; si falta algo, una segunda llamada de
+  texto simple —`agente_extraccion.preguntar_por_faltantes()`, reusando
+  `agents/_cliente.py::redactar()` tal cual— para la pregunta de
+  seguimiento). Mismo principio que el resto del backend: el código
+  orquesta, el modelo aporta juicio en pasos angostos.
+- **Probado con texto realista y desprolijo** (mensajes largos, hasta con
+  información repetida/mezclada) y extrajo datos limpios y coherentes en
+  2-3 turnos — ver Issues de prueba cerrados en el repo dedicado.
 
 ## Cómo ejecutarlo
 
@@ -116,7 +152,13 @@ usó quien llama — el body nunca puede mentir sobre quién es el aprobador.
   nombrarlo como costo explícito de la decisión, no descubrirlo tarde.
 - Un "agente" no necesita ser un loop ReAct para ser un agente útil en un
   sistema mayor — acá cada uno es una function call especializada, y el
-  backend orquesta determinísticamente alrededor.
+  backend orquesta determinísticamente alrededor. El canal chat sumó un
+  segundo agente (extracción) sin romper ese principio: sigue siendo dos
+  llamadas acotadas por turno, no un loop abierto.
+- Extraer la lógica de negocio del router (`core/casos_de_uso.py`) *antes*
+  de necesitar un segundo canal hizo que agregar el chat fuera casi solo
+  el agente nuevo — el refactor pagó de inmediato, no fue trabajo
+  especulativo.
 
 ## Próximo paso
 

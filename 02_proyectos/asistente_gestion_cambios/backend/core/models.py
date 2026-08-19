@@ -43,3 +43,14 @@ class AprobacionOut(BaseModel):
     clave: str
     estado_nuevo: str
     decision: Decision
+
+
+class MensajeChatIn(BaseModel):
+    conversacion_id: str | None = Field(None, description="None para arrancar una conversación nueva")
+    mensaje: str
+
+
+class MensajeChatOut(BaseModel):
+    conversacion_id: str
+    respuesta: str
+    solicitud: SolicitudOut | None = Field(None, description="Presente solo cuando la solicitud ya se creó")

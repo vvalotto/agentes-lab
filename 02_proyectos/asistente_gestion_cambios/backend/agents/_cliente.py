@@ -45,3 +45,25 @@ def redactar(system_prompt: str, prompt: str, max_tokens: int = 700) -> str:
     if response.stop_reason == "max_tokens":
         return texto + "\n\n*(redacción truncada por límite de tokens — revisar antes de publicar)*"
     raise RespuestaInesperadaError(response.stop_reason)
+
+
+def extraer(system_prompt: str, prompt: str, tool_schema: dict, max_tokens: int = 500) -> dict:
+    """Fuerza al modelo a llamar tool_schema y devuelve sus argumentos.
+
+    A diferencia de redactar(), acá no queremos prosa — queremos datos
+    estructurados. tool_choice fuerza la llamada en vez de dejarle al modelo
+    la opción de contestar en texto libre."""
+    response = _client.messages.create(
+        model=MODEL,
+        max_tokens=max_tokens,
+        system=system_prompt,
+        tools=[tool_schema],
+        tool_choice={"type": "tool", "name": tool_schema["name"]},
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    for block in response.content:
+        if block.type == "tool_use":
+            return block.input
+
+    raise RespuestaInesperadaError(response.stop_reason)
