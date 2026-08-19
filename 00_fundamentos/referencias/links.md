@@ -22,6 +22,10 @@ Registrar aquí links, papers y recursos relevantes a medida que se investiga.
 
 ## Otros recursos (agregar mientras investigás)
 
+| Recurso | Link | Leído |
+|---|---|---|
+| Documentación de agentes Claude (PDF local) | [documentacion_agentes_claude.pdf](documentacion_agentes_claude.pdf) | ☐ |
+
 ---
 
 *Actualizar la columna "Leído" al leer cada recurso.*

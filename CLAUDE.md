@@ -44,20 +44,26 @@ construcción.
 ## Estructura del repositorio
 
 ```
-agentes/
+agentes-lab/
 ├── CLAUDE.md                  ← este archivo (contexto + hoja de ruta)
+├── requirements.txt           ← dependencias del entorno (venv propio)
+├── .env / .env.example        ← ANTHROPIC_API_KEY (afuera de git desde el día uno)
 ├── 00_fundamentos/            ← teoría, conceptos, investigación inicial
-│   ├── notas/                 ← apuntes y síntesis de lecturas
+│   ├── notas/
+│   │   ├── modelo_mental_agentico.md      ← entregable Etapa 1 (completo)
+│   │   ├── diagramas_conceptos.md         ← diagramas del ciclo ReAct, agente, harness
+│   │   └── manejo_memoria_agentica.md     ← notas sobre tipos de memoria (insumo Etapa 3)
 │   └── referencias/           ← links, papers, docs de referencia
 ├── 01_prototipos/             ← experimentos y agentes mínimos funcionales
-│   ├── hola_agente/           ← primer agente (hello world agéntico)
-│   └── ...
+│   ├── hola_agente/           ← agente DDD, API directa, ciclo ReAct escrito a mano (completo)
+│   ├── hola_agente_sdk/       ← mismo agente con Claude Agent SDK (completo)
+│   └── hola_agente_web/       ← interfaz de chat en Streamlit sobre hola_agente (completo)
 ├── 02_proyectos/              ← proyectos más elaborados con objetivos claros
-│   ├── asistente_ddd/
-│   ├── agente_contenido/
-│   └── agente_docente/
-├── 03_herramientas/           ← utilidades, wrappers, helpers reutilizables
-└── 04_reflexiones/            ← diario de aprendizaje, decisiones, lecciones
+│   ├── asistente_ddd/         ← sin iniciar (Etapa 4)
+│   ├── agente_contenido/      ← sin iniciar (Etapa 3)
+│   └── agente_docente/        ← sin iniciar
+├── 03_herramientas/           ← utilidades, wrappers, helpers reutilizables (vacío por ahora)
+└── 04_reflexiones/            ← diario de aprendizaje, decisiones, lecciones (en curso)
 ```
 
 **Convenciones:**
@@ -72,7 +78,9 @@ agentes/
 El plan está estructurado en cuatro etapas progresivas. Cada etapa tiene un entregable concreto
 que actúa como validación del aprendizaje, no solo lectura.
 
-### Etapa 1 — Fundamentos del pensamiento agéntico (Semanas 1–3)
+**Estado actual (2026-08-06): Etapa 1 y Etapa 2 completas. Etapa 3 en curso.**
+
+### Etapa 1 — Fundamentos del pensamiento agéntico (Semanas 1–3) — ✅ completa
 
 El objetivo de esta etapa no es escribir código sino construir el modelo mental correcto.
 Un agente no es un chatbot con más herramientas: es un sistema que razona, actúa y observa
@@ -88,10 +96,13 @@ en ciclos. Comprender esa diferencia es el primer aprendizaje real.
 **Entregable de la Etapa 1:**
 Documento `00_fundamentos/notas/modelo_mental_agentico.md` con síntesis propia de los
 conceptos anteriores, usando ejemplos del contexto personal (DDD, docencia o contenido).
+**Estado: entregado.** Complementado con `diagramas_conceptos.md` (ciclo ReAct, estructura
+del agente, tipos de harness, anatomía de `TOOLS_SCHEMA`) y un adelanto de investigación
+sobre memoria (`manejo_memoria_agentica.md`) que ya sirve de insumo para la Etapa 3.
 
 ---
 
-### Etapa 2 — Primer agente funcional (Semanas 4–6)
+### Etapa 2 — Primer agente funcional (Semanas 4–6) — ✅ completa
 
 La comprensión se consolida cuando se implementa. El primer agente debe ser mínimo pero real:
 debe usar al menos una herramienta, mantener contexto entre turnos y producir un resultado útil.
@@ -111,10 +122,24 @@ Un agente que dado un concepto de DDD (Entidad, Agregado, Repositorio, etc.) gen
 
 **Entregable de la Etapa 2:**
 Prototipo funcional documentado + `README.md` con aprendizajes y decisiones de diseño.
+**Estado: entregado, y ampliado a tres variantes** (no solo una):
+- [`hola_agente/`](01_prototipos/hola_agente/) — API directa de Claude, ciclo ReAct (`while True`
+  + parseo de `stop_reason`) escrito a mano, tools registradas con JSON Schema manual.
+- [`hola_agente_sdk/`](01_prototipos/hola_agente_sdk/) — la misma tarea con el Claude Agent SDK
+  (`query()`, decorador `@tool`, `create_sdk_mcp_server`), comparado línea a línea contra la
+  versión de API directa en su README.
+- [`hola_agente_web/`](01_prototipos/hola_agente_web/) — interfaz de chat en Streamlit que
+  reutiliza `react_loop()` de `hola_agente/` sin duplicar lógica, para que el concepto DDD lo
+  elija quien usa el agente y no el código.
+
+Bug real encontrado y corregido durante esta etapa: `max_tokens=1024` cortaba respuestas largas
+y el `stop_reason == "max_tokens"` caía en un `else` mudo — documentado en la entrada del
+2026-08-06 del diario. Todavía sin manejo de errores de red/API en ninguno de los tres
+prototipos (omisión consciente, aceptable para prototipos de aprendizaje).
 
 ---
 
-### Etapa 3 — Agentes con memoria y estado (Semanas 7–10)
+### Etapa 3 — Agentes con memoria y estado (Semanas 7–10) — 🔶 en curso
 
 Los agentes que cambian el mundo (o al menos un flujo de trabajo) necesitan recordar.
 Esta etapa trabaja con persistencia, contexto largo y gestión del estado entre sesiones.
@@ -135,6 +160,15 @@ Un agente que asista en la escritura del libro de DDD. Dado un capítulo planifi
 
 **Entregable de la Etapa 3:**
 Prototipo funcional + diagrama de arquitectura + reflexión sobre limitaciones encontradas.
+
+**Punto de partida ya definido (no arrancar de cero):** los tres prototipos de Etapa 2 corren y
+mueren sin dejar rastro entre sesiones — ninguno lee ni escribe nada fuera de su propio proceso.
+El primer paso concreto de la Etapa 3 es convertir una de las tools (`generar_definicion()` en
+`hola_agente/`, o su equivalente `GLOSARIO_DDD` en `hola_agente_sdk/`) para que lea notas reales
+de Obsidian o de un archivo de dominio, en vez de generar todo desde cero o consultar un
+diccionario hardcodeado en cada llamada. Ese paso es, a la vez, el cierre real de la Etapa 2 y la
+puerta de entrada a la Etapa 3. Las notas de `manejo_memoria_agentica.md` ya cubren la base
+teórica (tipos de memoria) necesaria para decidir el diseño.
 
 ---
 
@@ -233,3 +267,4 @@ no con esfuerzo máximo sostenido.
 *Creado: Abril 2026 | Autor: Víctor Valotto | Estado: activo, en evolución continua*
 *Este archivo es un documento vivo. Se actualiza al completar cada etapa.*
 *Migrado de `~/Documents/Claude/agentes` a `~/PycharmProjects/agentes-lab` el 2026-08-05 — proyecto ejecutable con venv propio, `requirements.txt` y control de versiones.*
+*Actualizado el 2026-08-06 — Etapa 1 y Etapa 2 marcadas como completas, Etapa 3 en curso.*
